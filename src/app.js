@@ -7,7 +7,12 @@ const STORAGE_KEY = 'markdown-notes'
 // --------------------------------------------
 // UTILIDADES DE TEXTO
 // --------------------------------------------
-/* Extrae el título de una nota desde su contenido */
+
+/**
+ * Extrae el título de una nota desde su contenido
+ * @param {string} content - Contenido de la nota
+ * @returns {string} Título derivado del contenido
+ */
 function deriveTitle(content) {
     if (content === "" || content === null || content === undefined) {
       return "Sin título";
@@ -44,8 +49,12 @@ function deriveTitle(content) {
     return firstLine.trim();
 }
 
-
-/**Extrae un resumen corto del contenido de la nota*/
+/**
+ * Extrae un resumen corto del contenido de la nota
+ * @param {string} content - Contenido de la nota
+ * @param {number} maxLen - Longitud máxima del resumen (opcional)
+ * @returns {string} Resumen del contenido
+ */
 function deriveExcerpt(content, maxLen) {
   if (content === "" || content === null || content === undefined) {
     return ""
@@ -71,7 +80,10 @@ function deriveExcerpt(content, maxLen) {
 // --------------------------------------------
 // GENERACIÓN DE ID ÚNICO
 // --------------------------------------------
-/*Genera un ID único basado en la fecha actual*/
+/**
+ * Genera un ID único basado en la fecha actual
+ * @returns {number} Timestamp en milisegundos desde 1970
+ */
 function generateId() {
   const timestamp = Date.now();
   return timestamp;
@@ -119,18 +131,54 @@ function createNote(content, title) {
   return note;
 }
 
-// --------------------------------------------
-// STORE DE NOTAS (FASE 2)
-// Usa closures para encapsular el estado
-// --------------------------------------------
+/**
+ * Guarda las notas en LocalStorage
+ * @param {Array} notes - Array de notas a guardar 
+ */
+
+function saveToStorage(notes) {
+  if (notes === null || notes === undefined) {
+    console.error('No es posible guardar las notas: Datos inválidos')
+    return
+  }
+  const notesJSON = JSON.stringify(notes)
+  localStorage.setItem(STORAGE_KEY, notesJSON)
+}
 
 /**
- * Crea un store para manejar el estado de las notas
- * @returns {Object} Objeto con métodos para interactuar con las notas
+ * carga las notas desde LocalStorage
+ * @returns {Array} Array de notas o array vacio si no hay datos
  */
-function createNotesStore() {
-  let notes = [];
+function loadFromStorage() {
+  const notesJSON = localStorage.getItem(STORAGE_KEY)
 
+  if (notesJSON === null || notesJSON === undefined) {
+    return []
+  }
+
+  let notes = []
+  const parsedNotes = JSON.parse(notesJSON)
+
+  if (Array.isArray(parsedNotes)) {
+    notes = parsedNotes
+  }
+
+  return notes
+}
+
+/**
+ * Crea un store que persiste automáticamente en localStorage
+ * @returns {Object} Store con métodos para gestionar notas
+ */
+function createPersistentNotesStore() {
+  let notes = loadFromStorage()
+
+  /**
+   * Agrega una nueva nota y la persiste en localStorage
+   * @param {string} content - Contenido de la nota
+   * @param {string} [title] - Título opcional de la nota
+   * @returns {Object} Resultado de la operación
+   */
   function addNote(content, title) {
     if (content === undefined || content === null || content.trim() === "") {
       return { success: false, message: 'El contenido no puede estar vacío' };
@@ -143,10 +191,15 @@ function createNotesStore() {
     }
 
     notes.push(newNote);
+    saveToStorage(notes)
 
     return { success: true, note: newNote };
   }
 
+  /**
+   * Obtiene todas las notas
+   * @returns {Array} Copia del array de notas
+   */
   function getAllNotes() {
     const notesCopy = notes.map((note) => {
       return { ...note };
@@ -155,6 +208,11 @@ function createNotesStore() {
     return notesCopy;
   }
 
+  /**
+   * Obtiene una nota por su ID
+   * @param {number} noteId - ID de la nota a buscar
+   * @returns {Object|null} Nota encontrada o null si no existe
+   */
   function getNoteById(noteId) {
     const foundNote = notes.find((note) => {
       return note.id === noteId;
@@ -167,6 +225,15 @@ function createNotesStore() {
     return { ...foundNote };
   }
 
+  /**
+   * Actualiza una nota existente
+   * @param {number} noteId - ID de la nota a actualizar
+   * @param {Object} updates - Campos a actualizar
+   * @param {string} [updates.content] - Nuevo contenido
+   * @param {string} [updates.title] - Nuevo título
+   * @param {boolean} [updates.favorite] - Estado de favorito
+   * @returns {Object} Resultado de la operación
+   */
   function updateNote(noteId, updates) {
     if (noteId === undefined || noteId === null) {
       return { success: false, message: 'ID inválido' };
@@ -201,10 +268,16 @@ function createNotesStore() {
     }
 
     noteToUpdate.updatedAt = Date.now();
+    saveToStorage(notes);
 
     return { success: true, note: { ...noteToUpdate } };
   }
 
+  /**
+   * Elimina una nota por su ID
+   * @param {number} noteId - ID de la nota a eliminar
+   * @returns {Object} Resultado de la operación
+   */
   function deleteNote(noteId) {
     if (noteId === undefined || noteId === null) {
       return { success: false, message: 'ID inválido' };
@@ -219,10 +292,17 @@ function createNotesStore() {
     if (notes.length === initialLength) {
       return { success: false, message: 'Nota no encontrada' };
     }
+  
+    saveToStorage(notes);
 
     return { success: true, message: 'Nota eliminada exitosamente' };
   }
 
+  /**
+   * Busca notas por texto en título o contenido
+   * @param {string} query - Texto a buscar
+   * @returns {Array} Notas que coinciden con la búsqueda
+   */
   function searchNotes(query) {
     if (query === undefined || query === null || query.trim() === '') {
       return [];
@@ -245,6 +325,10 @@ function createNotesStore() {
     });
   }
 
+  /**
+   * Obtiene las notas ordenadas por fecha de actualización
+   * @returns {Array} Notas ordenadas de más reciente a más antigua
+   */
   function getNotesOrderedByDate() {
     const notesCopy = notes.map(function (note) {
       return { ...note };
@@ -257,6 +341,10 @@ function createNotesStore() {
     return notesCopy;
   }
 
+  /**
+   * Obtiene las notas marcadas como favoritas
+   * @returns {Array} Notas favoritas
+   */
   function getFavoriteNotes() {
     const favorites = notes.filter(function (note) {
       return note.favorite === true;
@@ -267,6 +355,10 @@ function createNotesStore() {
     });
   }
 
+  /**
+   * Obtiene el número total de notas
+   * @returns {number} Cantidad de notas
+   */
   function getNotesCount() {
     return notes.length;
   }
@@ -282,41 +374,4 @@ function createNotesStore() {
     getFavoriteNotes,
     getNotesCount
   };
-}
-
-
-/**
- * Guarda las notas en LocalStorage
- * @param {Array} notes - Array de notas a guardar 
- */
-
-function saveToStorageNotes(notes) {
-  if (notes === null || notes === undefined) {
-    console.error('No es posible guardar las notas: Datos inválidos')
-    return
-  }
-  const notesJSON = JSON.stringify(notes)
-  localStorage.setItem(STORAGE_KEY, notesJSON)
-}
-
-/**
- * carga las notas desde LocalStorage
- * @returns {Array} Array de notas o array vacio si no hay datos
- */
-
-function loadFromStorage() {
-  const notesJSON = localStorage.getItem(STORAGE_KEY)
-
-  if (notesJSON === null || notesJSON === undefined) {
-    return []
-  }
-
-  let notes = []
-  const parsedNotes = JSON.parse(notesJSON)
-
-  if (Array.isArray(parsedNotes)) {
-    notes = parsedNotes
-  }
-
-  return notes
 }
