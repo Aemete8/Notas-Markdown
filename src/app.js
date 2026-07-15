@@ -3,6 +3,7 @@
 // ============================================
 
 const STORAGE_KEY = 'markdown-notes'
+let currentNoteId = null
 
 // --------------------------------------------
 // UTILIDADES DE TEXTO
@@ -374,4 +375,133 @@ function createPersistentNotesStore() {
     getFavoriteNotes,
     getNotesCount
   };
+}
+
+/**
+ * Muestra el editor y el preview
+ */
+function showEditorAndPreview() {
+  const editorSection = document.querySelector('#editor-section')
+  const previewSection = document.querySelector('#preview-section')
+
+  editorSection.style.display = 'flex'
+  previewSection.style.display = 'flex'
+}
+
+/**
+ * Oculta el editor y el preview
+ */
+function hideEditorAndPreview() {
+  const editorSection = document.querySelector('#editor-section')
+  const previewSection = document.querySelector('#preview-section')
+
+  editorSection.style.display = 'none'
+  previewSection.style.display = 'none'
+}
+
+/**
+ * Renderiza la lista de notas en el DOM
+ * @param {Array} notes - Array de notas a renderizar
+ */
+function renderNoteList(notes) {
+  const noteListContainer = document.querySelector('#note-list')
+
+  if (noteListContainer === null) {
+    return
+  }
+
+  noteListContainer.textContent = ''
+
+  if (notes === null || notes === undefined || notes.length === 0) {
+    const emptyState = document.createElement('p')
+    emptyState.className = 'note-list-empty'
+    emptyState.textContent = 'No hay notas todavía'
+    noteListContainer.appendChild(emptyState)
+    return
+  }
+
+  notes.forEach(function (note) {
+    const noteItem = document.createElement('article')
+    noteItem.className = 'note-item'
+    noteItem.dataset.noteId = String(note.id)
+
+    if (note.id === currentNoteId) {
+      noteItem.classList.add('active')
+    }
+
+    const titleElement = document.createElement('h3')
+    titleElement.className = 'note-item-title'
+    titleElement.textContent = note.title
+
+    const excerptElement = document.createElement('p')
+    excerptElement.className = 'note-item-excerpt'
+    excerptElement.textContent = note.excerpt
+
+    const dateElement = document.createElement('time')
+    dateElement.className = 'note-item-date'
+    const noteDate = new Date(note.updatedAt)
+    dateElement.dateTime = noteDate.toISOString()
+    dateElement.textContent = noteDate.toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    })
+
+    noteItem.appendChild(titleElement)
+    noteItem.appendChild(excerptElement)
+    noteItem.appendChild(dateElement)
+    noteListContainer.appendChild(noteItem)
+  })
+}
+
+/**
+ * Renderiza el editor con el contenido de una nota
+ * @param {object||null} nota - Nota a renderizar o null para el editor vacio
+ */
+function renderEditor(note) {
+  const titleInput = document.querySelector('#note-title')
+  const contentTextarea = document.querySelector('#note-content')
+
+  if (titleInput === null || contentTextarea === null) {
+    return
+  }
+
+  if (note === null || note === undefined) {
+    titleInput.value = ''
+    contentTextarea.value = ''
+    currentNoteId = null
+    return
+  }
+
+  titleInput.value = note.title
+  contentTextarea.value = note.content
+  currentNoteId = note.id
+  showEditorAndPreview()
+}
+
+/**
+ * Renderiza el preview del contenido markdown
+ * @param {string} content - Contenido markdown a renderizar
+ */
+function renderPreview(content) {
+  const previewContainer = document.querySelector('#preview-content')
+
+  if (previewContainer === null) {
+    return
+  }
+
+  previewContainer.textContent = ''
+
+  if (content === null || content === undefined || content.trim() === '') {
+    const emptyState = document.createElement('p')
+    emptyState.className = 'preview-empty'
+    emptyState.textContent = 'No hay contenido para previsualizar'
+    previewContainer.appendChild(emptyState)
+    return
+  }
+
+  const previewElement = document.createElement('div')
+  previewElement.className = 'markdown-preview'
+  previewElement.textContent = content
+  previewContainer.appendChild(previewElement)
 }
