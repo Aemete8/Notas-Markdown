@@ -25,19 +25,9 @@ function deriveTitle(content) {
         return "Sin título";
     }
 
-    let firstLine = "";
-    let foundNewLine = false;
-
-    for (let i = 0; i < cleanContent.length; i++) {
-        const char = cleanContent[i];
-
-        if (char === "\n") {
-            foundNewLine = true;
-            break;
-        }
-
-        firstLine = firstLine + char;
-    }
+    const spaceIndex = cleanContent.indexOf("\n");
+    const index = spaceIndex != -1 ? spaceIndex : cleanContent.length;
+    let firstLine = cleanContent.slice(0, index);
 
     if (firstLine.trim() === "") {
         return "Sin título";
@@ -442,11 +432,7 @@ function renderNoteList(notes) {
 
         const noteDate = document.createElement("small");
         const date = new Date(note.updatedAt);
-        noteDate.textContent = noteDate.toLocaleDateString("es-ES", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-        });
+        noteDate.textContent = date.toLocaleDateString();
         noteDate.className = "note-date";
 
         noteItem.appendChild(noteTitle);
@@ -477,6 +463,18 @@ function renderEditor(note) {
 }
 
 /**
+ * Funcion para hacer render del Markdown
+ * @param {String} content - contenido de la nota
+ */
+
+function renderMarkdown(content) {
+    if (typeof window.markdownit != "undefined") {
+        const md = window.markdownit();
+        return md.render(content);
+    }
+}
+
+/**
  * Renderiza el preview del contenido markdown
  * @param {string} content - Contenido markdown a renderizar
  */
@@ -493,51 +491,19 @@ function renderPreview(content) {
         return;
     }
 
-    const lines = content.split("\n");
-
-    lines.forEach(function (line) {
-        if (line.startsWith("# ")) {
-            const heading = document.createElement("h1");
-            heading.textContent = line.slice(2);
-            previewContainer.append(heading);
-        } else if (line.startsWith("## ")) {
-            const heading = document.createElement("h2");
-            heading.textContent = line.slice(3);
-            previewContainer.append(heading);
-        } else if (line.startsWith("### ")) {
-            const heading = document.createElement("h3");
-            heading.textContent = line.slice(4);
-            previewContainer.append(heading);
-        } else if (line.startsWith("- ")) {
-            const listItem = document.createElement("li");
-            listItem.textContent = line.slice(2);
-            previewContainer.append(listItem);
-        } else if (line.trim() === "") {
-            const br = document.createElement("br");
-            previewContainer.append(br);
-        } else {
-            const paragraph = document.createElement("p");
-            paragraph.textContent = line;
-            previewContainer.append(paragraph);
-        }
-    });
+    const html = renderMarkdown(content);
+    previewContainer.innerHTML = html;
 }
 
 /**
  * Muestra un mensaje de error o exito
  * @param {String} message - Mensaje a mostrar
- * @param {Boolean} isError - True si es error, false si es exito
+ * @param {String} type - Nombre o tipo de la clase a agregar
  */
-
-function showMessage(message, isError) {
+function showMessage(message, type) {
     const messageContainer = document.querySelector("#message-container");
     messageContainer.textContent = message;
-
-    if (isError === true) {
-        messageContainer.className("message-error");
-    } else {
-        messageContainer.className("message-succes");
-    }
+    messageContainer.className = type;
 
     setTimeout(() => {
         messageContainer.textContent = "";
@@ -546,25 +512,27 @@ function showMessage(message, isError) {
 }
 
 /**
- * Inicializa todos los event listeners de la aplicacion
- * @param {Object} store - Store de notas
+ * Inicializar el listener del botón de nueva nota
  */
-
-function initializeEventListeners(store) {
+function initializeNewNoteButton() {
     const newNoteButton = document.querySelector("#new-note-button");
-
     newNoteButton.addEventListener("click", () => {
         renderEditor(null);
     });
+}
 
+/**
+ * Inicializa el listener del botón de guardar nota
+ * @param {Object} store - Store de notas
+ */
+function initializeSaveNoteButton(store) {
     const saveNoteButton = document.querySelector("#save-note-button");
-
     saveNoteButton.addEventListener("click", () => {
         const editorTextarea = document.querySelector("#editor-textarea");
         const content = editorTextarea.value;
 
         if (content.trim() === "") {
-            showMessage("El contenido no puede estar vacio", true);
+            showMessage("El contenido no puede estar vacio", "error");
             return;
         }
 
@@ -572,24 +540,141 @@ function initializeEventListeners(store) {
             const result = store.updateNote(currentNoteId, { content });
 
             if (result.success === true) {
-                showMessage("Nota actualizada exitosamente", false);
+                showMessage("Nota actualizada exitosamente", "success");
                 const notes = store.getNotesOrderedByDate();
                 renderNoteList(notes);
             } else {
-                showMessage(results.message, true);
+                showMessage(result.message, "error");
             }
         } else {
             const result = store.addNote(content);
             if (result.success === true) {
-                showMessage("Nota creada exitosamente.", false);
+                showMessage("Nota creada exitosamente.", "success");
                 currentNoteId = result?.note?.id;
                 const notes = store.getNotesOrderedByDate();
                 renderNoteList(notes);
             } else {
-                showMessage(result.message, true);
+                showMessage(result.message, "error");
             }
         }
     });
-
-    const deleteNoteButton = document.querySelector("#delete-note-button");
 }
+
+/**
+ * Inicializa el listener del botón de eliminar nota
+ * @param {Object} store - Store de notas
+ */
+function initializeDeleteNoteButton(store) {
+    const deleteNoteButton = document.querySelector("#delete-note-button");
+    deleteNoteButton.addEventListener("click", () => {
+        if (currentNoteId === null) {
+            showMessage("No hay una nota seleccionada para eliminar", "error");
+        }
+
+        const confirmed = confirm("¿Estas seguro de eliminar esta nota?");
+        if (confirmed === true) {
+            const result = store.deleteNote(currentNoteId);
+
+            if (result.success === true) {
+                showMessage("Nota eliminada exitosamente", "success");
+                hideEditorAndPreview();
+                currentNoteId = null;
+                const notes = store.getNotesOrderedByDate();
+                renderNoteList(notes);
+            } else {
+                showMessage(result.message, "error");
+            }
+        }
+    });
+}
+
+/**
+ * Inicializa el listener del textarea del editor
+ */
+function initializeEditorTextarea() {
+    const editorTextarea = document.querySelector("#editor-textarea");
+    editorTextarea.addEventListener("input", () => {
+        const content = editorTextarea.value;
+        renderPreview(content);
+    });
+}
+
+/**
+ * Inicializa el listener de la lista de notas
+ * @param {Object} store - Store de notas
+ */
+function initializeNoteList(store) {
+    const noteListContainer = document.querySelector("#note-list");
+    noteListContainer.addEventListener("click", (event) => {
+        const noteItem = event.target.closest(".note-item");
+        if (noteItem != null) {
+            const noteId = Number(noteItem.dataset.noteId);
+            const note = store.getNoteById(noteId);
+
+            if (note != null) {
+                renderEditor(note);
+                const notes = store.getNotesOrderedByDate();
+                renderNoteList(notes);
+            }
+        }
+    });
+}
+
+/**
+ * Inicializa todos los event listeners de la aplicacion
+ * @param {Object} store - Store de notas
+ */
+function initializeEventListeners(store) {
+    initializeNewNoteButton();
+    initializeSaveNoteButton(store);
+    initializeDeleteNoteButton(store);
+    initializeEditorTextarea();
+    initializeNoteList(store);
+}
+
+/**
+ * Inicializa el toggle para cambiar de tema 
+ */
+function initializeThemeToggle() {
+    const root = document.documentElement;
+    const btn = document.getElementById("theme-toggle");
+
+    // Recuperar preferencia guardada o usar dark por defecto
+    const saved = localStorage.getItem("md-notes-theme");
+    const prefersDark = window.matchMedia(
+        "(prefers-color-scheme: dark)",
+    ).matches;
+    const initial = saved ?? (prefersDark ? "dark" : "light");
+    root.setAttribute("data-theme", initial);
+
+    btn.addEventListener("click", function () {
+        const next =
+            root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+        root.setAttribute("data-theme", next);
+        localStorage.setItem("md-notes-theme", next);
+    });
+}
+
+/**
+ * Funcion principal que inicializa la aplicacion
+ * @param {} params
+ */
+function initializeApp() {
+    const store = createPersistentNotesStore();
+    const notes = store.getNotesOrderedByDate();
+
+    initializeThemeToggle();
+
+    renderNoteList(notes);
+
+    hideEditorAndPreview();
+
+    initializeEventListeners(store);
+}
+
+/**
+ * Inicializa la app hasta despues de cargar todo el DOM
+ */
+document.addEventListener("DOMContentLoaded", () => {
+    initializeApp();
+});

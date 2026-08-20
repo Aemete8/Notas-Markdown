@@ -1,14 +1,224 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Notas Markdown</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-    <h1>Notas Markdown</h1>
-    <p>Aplicación para gestionar notas en formato Markdown</p>
-    <script src="app.js"></script>
-</body>
+<!doctype html>
+<html lang="es" data-theme="dark">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Notas Markdown</title>
+
+        <!-- Geist & Geist Mono via Vercel CDN -->
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap"
+            rel="stylesheet"
+        />
+
+        <link rel="stylesheet" href="./styles.css" />
+    </head>
+
+    <body>
+        <!-- =============================================
+        APP SHELL
+        ============================================= -->
+        <div class="app">
+            <!-- ── HEADER ──────────────────────────────── -->
+            <header class="app-header" role="banner">
+                <div class="app-header__brand">
+                    <!-- Icono inline SVG: pluma minimalista -->
+                    <svg
+                        class="app-header__icon"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        aria-hidden="true"
+                        xmlns="http://www.w3.org/2000/svg"
+                    >
+                        <path
+                            d="M15 2L18 5L8 15H5V12L15 2Z"
+                            stroke="currentColor"
+                            stroke-width="1.5"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        />
+                        <path
+                            d="M2 18H18"
+                            stroke="currentColor"
+                            stroke-width="1.5"
+                            stroke-linecap="round"
+                        />
+                    </svg>
+                    <span class="app-header__title">Notas Markdown</span>
+                </div>
+
+                <!-- Mensaje de estado (éxito / error) -->
+                <div
+                    id="message-container"
+                    class="app-header__message"
+                    role="status"
+                    aria-live="polite"
+                    aria-atomic="true"
+                ></div>
+
+                <!-- Toggle dark / light -->
+                <button
+                    id="theme-toggle"
+                    class="btn btn--icon"
+                    aria-label="Cambiar tema"
+                    title="Cambiar tema claro / oscuro"
+                >
+                    <!-- Icono sol (light mode) -->
+                    <svg
+                        class="icon-sun"
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        aria-hidden="true"
+                        xmlns="http://www.w3.org/2000/svg"
+                    >
+                        <circle
+                            cx="12"
+                            cy="12"
+                            r="4"
+                            stroke="currentColor"
+                            stroke-width="1.5"
+                        />
+                        <path
+                            d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
+                            stroke="currentColor"
+                            stroke-width="1.5"
+                            stroke-linecap="round"
+                        />
+                    </svg>
+                    <!-- Icono luna (dark mode) -->
+                    <svg
+                        class="icon-moon"
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        aria-hidden="true"
+                        xmlns="http://www.w3.org/2000/svg"
+                    >
+                        <path
+                            d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79Z"
+                            stroke="currentColor"
+                            stroke-width="1.5"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        />
+                    </svg>
+                </button>
+            </header>
+
+            <!-- ── LAYOUT PRINCIPAL ────────────────────── -->
+            <div class="app-layout">
+                <!-- ── SIDEBAR ──────────────────────────── -->
+                <aside class="sidebar" aria-label="Lista de notas">
+                    <div class="sidebar__header">
+                        <h2 class="sidebar__title">Mis notas</h2>
+
+                        <div class="sidebar__actions">
+                            <button
+                                id="new-note-button"
+                                class="btn btn--primary btn--full"
+                            >
+                                <svg
+                                    width="14"
+                                    height="14"
+                                    viewBox="0 0 14 14"
+                                    fill="none"
+                                    aria-hidden="true"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                >
+                                    <path
+                                        d="M7 1v12M1 7h12"
+                                        stroke="currentColor"
+                                        stroke-width="1.5"
+                                        stroke-linecap="round"
+                                    />
+                                </svg>
+                                Nueva nota
+                            </button>
+
+                            <div class="sidebar__actions-row">
+                                <button
+                                    id="delete-note-button"
+                                    class="btn btn--danger btn--sm"
+                                >
+                                    Eliminar
+                                </button>
+                                <button
+                                    id="export-notes-button"
+                                    class="btn btn--ghost btn--sm"
+                                >
+                                    Exportar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lista de notas -->
+                    <nav
+                        id="note-list"
+                        class="note-list"
+                        aria-label="Notas guardadas"
+                    ></nav>
+                </aside>
+
+                <!-- ── EDITOR ───────────────────────────── -->
+                <main
+                    id="editor-section"
+                    class="editor"
+                    aria-label="Editor de nota"
+                    style="display: none"
+                >
+                    <div class="editor__header">
+                        <h2 class="editor__title">Editor</h2>
+                        <div class="editor__actions">
+                            <button
+                                id="save-note-button"
+                                class="btn btn--success btn--sm"
+                            >
+                                Guardar
+                            </button>
+                        </div>
+                    </div>
+
+                    <textarea
+                        id="editor-textarea"
+                        class="editor__textarea"
+                        placeholder="Escribe tu nota en Markdown…"
+                        spellcheck="true"
+                        aria-label="Contenido de la nota en Markdown"
+                    ></textarea>
+                </main>
+
+                <!-- ── PREVIEW ──────────────────────────── -->
+                <section
+                    id="preview-section"
+                    class="preview"
+                    aria-label="Vista previa"
+                    style="display: none"
+                >
+                    <div class="preview__header">
+                        <h2 class="preview__title">Vista previa</h2>
+                    </div>
+
+                    <div
+                        id="preview-container"
+                        class="preview__body"
+                        aria-live="polite"
+                    ></div>
+                </section>
+            </div>
+            <!-- /.app-layout -->
+        </div>
+        <!-- /.app -->
+
+        <!-- markdown-it para renderizado completo (JS lo usa) -->
+        <script src="https://cdn.jsdelivr.net/npm/markdown-it@14.0.0/dist/markdown-it.min.js"></script>
+        <script type="module" src="./app.js"></script>
+    </body>
 </html>
