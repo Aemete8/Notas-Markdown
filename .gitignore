@@ -1,0 +1,21 @@
+# ─── Dependencias ───────────────────────────
+node_modules/
+
+# ─── Prettier ───────────────────────────────
+.prettierrc.local
+
+# ─── Sistema operativo ──────────────────────
+.DS_Store
+Thumbs.db
+
+# ─── Editores ───────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# ─── Logs ───────────────────────────────────
+*.log
+npm-debug.log*
