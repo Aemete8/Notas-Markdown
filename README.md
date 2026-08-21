@@ -22,8 +22,10 @@ Aplicación web para crear, editar y previsualizar notas en formato Markdown. Co
 ```
 notas-markdown/
 ├── index.html
-├── styles.css
-├── app.js
+├── css/
+│   └── styles.css
+├── js/
+│   └── app.js
 ├── .gitignore
 ├── .prettierrc
 ├── package.json
